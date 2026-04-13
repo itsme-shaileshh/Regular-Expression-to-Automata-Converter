@@ -1,149 +1,106 @@
 # Regular Expression to Automata Converter
 
-## Project Overview
+[Live Demo](https://69dd3ae49de0af5ed760ad21--reliable-medovik-620984.netlify.app/)
 
-Build a polished single-page web application that converts a user-provided regular expression into a visual automaton using Thompson's construction. The application should generate both an ε-NFA and its equivalent DFA, display a transition table for each, and let users simulate input strings step-by-step on the DFA.
+## Overview
 
-This project is implemented in plain HTML, CSS, and JavaScript with no external frameworks.
+This project is a lightweight web application that converts regular expressions into finite automata using Thompson's construction. It visualizes both the ε-NFA and the equivalent DFA, shows the NFA construction process step-by-step, and provides an interactive DFA string simulator.
 
-## Core Requirements
+Built with plain HTML, CSS, and JavaScript, the app avoids external frameworks and keeps the implementation easy to inspect and extend.
 
-1. **Regex Parsing and AST Construction**
-   - Tokenize regex input into symbols and operators.
-   - Use a recursive descent parser for the grammar:
-     - `Expr → Term (| Term)*`
-     - `Term → Factor+`
-     - `Factor → Atom (* | + | ?)*`
-     - `Atom → char | ε | ( Expr )`
-   - Supported operators:
-     - `|` union
-     - `*` Kleene star
-     - `+` one-or-more
-     - `?` optional
-     - `()` grouping
-     - `ε` epsilon (or `\e` as an alternative)
-   - Produce an AST with node types: `Char`, `Eps`, `Union`, `Concat`, `Star`, `Plus`, `Opt`.
+## Features
 
-2. **Step-by-Step Construction Preview**
-   - Show how the ε-NFA is built from the AST before rendering the final graph.
-   - Capture incremental NFA fragments for each regex operator and construction rule.
-   - Present a stepper with labeled build steps and an intermediate diagram for each stage.
-   - Only show the final complete automaton after the user has reviewed the construction sequence.
+- Regular expression parsing with a recursive descent parser
+- AST-based Thompson construction for ε-NFA generation
+- Subset construction to produce an equivalent DFA
+- Step-by-step NFA build preview before the final automaton is shown
+- SVG-based automaton visualization with pan and zoom
+- Transition tables for both ε-NFA and DFA
+- Interactive input string simulation with execution tape and logs
+- Example regex buttons and user-friendly controls
+- Responsive dark theme with polished UI
 
-3. **Thompson's Construction for ε-NFA**
-   - Build an ε-NFA from the AST.
-   - Implement NFA fragment constructors for:
-     - literal characters
-     - epsilon transitions
-     - union
-     - concatenation
-     - Kleene star
-     - plus
-     - optional
-   - Represent transitions as objects with `from`, `label`, and `to`.
+## Deployment
 
-3. **Subset Construction for DFA Conversion**
-   - Convert the generated ε-NFA into an equivalent DFA.
-   - Compute ε-closures and move transitions.
-   - Build DFA states from sets of NFA states and produce transitions on the input alphabet.
-   - Mark DFA accepting states as those containing the NFA accept state.
+The app is deployed at:
 
-4. **Visualization with SVG**
-   - Render the ε-NFA and DFA as SVG diagrams.
-   - Display each state with a circle, label, start arrow, and accept-state ring.
-   - Render transitions as straight lines, curved edges for bidirectional links, and self-loops.
-   - Label transitions with their symbols or `ε`.
-   - Provide pan and zoom support for the SVG canvas.
+https://69dd3ae49de0af5ed760ad21--reliable-medovik-620984.netlify.app/
 
-5. **Interactive UI**
-   - Input field for regex entry and a `Build` button.
-   - Quick example buttons for sample regexes.
-   - Toggle controls for:
-     - showing the DFA
-     - showing ε-transitions
-   - Tabbed canvas view for:
-     - ε-NFA visualization
-     - DFA visualization
-     - transition table
-   - Download the current SVG diagram.
+## Project Structure
 
-6. **Transition Tables**
-   - Show an ε-NFA transition table with all states and labels.
-   - Show a DFA transition table with one row per DFA state.
-   - Highlight start and accept states in the tables.
+- `index.html` — application layout, controls, and page structure
+- `style.css` — responsive styling, theme, and canvas UI
+- `automata.js` — parser, NFA/DFA construction, rendering, simulation, and stepper logic
+- `README.md` — project overview, usage, and replication prompt
 
-7. **Simulation Mode**
-   - Allow users to enter a test string.
-   - Simulate the string on the DFA.
-   - Show step-by-step execution with a tape display and log.
-   - Support next/previous step controls and autoplay.
-   - Display clear accept/reject results.
+## Supported Regex Syntax
 
-8. **Construction Steps Display**
-   - Present parser/construction steps in a timeline or card layout.
-   - Explain each parsed operator and construction decision.
+- `|` union
+- `*` Kleene star
+- `+` one-or-more
+- `?` optional
+- `()` grouping
+- `ε` epsilon (also accepted as `\e`)
 
-9. **Responsive Styling**
-   - Use modern CSS styling with gradient backgrounds, cards, and clean typography.
-   - Ensure the layout works at desktop widths and smaller screens.
-   - Include a polished information panel with icons and stats.
+## How to Run Locally
 
-## File Structure
+### Option 1: Open directly
 
-- `index.html` — the application shell, layout, and controls.
-- `style.css` — the UI styling, responsive layout, and SVG theme.
-- `automata.js` — all parsing, construction, DFA conversion, rendering, and simulation logic.
-- `README.md` — this project overview and replication prompt.
+1. Open `index.html` in a browser.
+2. Enter a regular expression.
+3. Click `Build`.
 
-## Detailed Implementation Notes
+### Option 2: Serve with a local web server
 
-### Tokenizer
-- Convert the regex string into token objects.
-- Support parentheses, union, star, plus, optional, epsilon, and literal symbols.
-- Ignore whitespace.
+```bash
+cd /workspaces/Regular-Expression-to-Automata-Converter
+python3 -m http.server 8000
+```
 
-### Parser
-- Implement a recursive descent parser with methods for `parseExpr`, `parseTerm`, `parseFactor`, and `parseAtom`.
-- Construct step metadata for each parse operation.
-- Throw errors for invalid syntax, missing parentheses, or unexpected tokens.
+Then visit:
+
+`http://localhost:8000`
+
+## Usage
+
+1. Enter a regular expression in the input field.
+2. Click `Build` to parse and begin the construction trace.
+3. Advance through the NFA build steps with `Prev` and `Next`.
+4. Click `Finish Build` to view the completed automaton.
+5. Switch to the DFA tab or transition table to inspect the deterministic model.
+6. Use the Simulation tab to test input strings and observe acceptance.
+
+## Implementation Notes
+
+### Parsing
+
+- Uses a recursive descent parser.
+- Grammar:
+  - `Expr → Term (| Term)*`
+  - `Term → Factor+`
+  - `Factor → Atom (* | + | ?)*`
+  - `Atom → char | ε | ( Expr )`
+- Produces an AST with nodes like `Char`, `Eps`, `Union`, `Concat`, `Star`, `Plus`, and `Opt`.
 
 ### NFA Construction
-- Assign new numeric state IDs from a global counter.
-- Build NFA fragments with `makeNFA(start, accept, transitions)`.
-- Combine fragments using ε-transitions for union, concatenation, star, plus, and optional.
-- Record the intermediate NFA fragment after each construction step for a visual build trace.
 
-### DFA Construction
-- Compute the alphabet from NFA transitions excluding `ε`.
-- Create DFA states from sorted ε-closure arrays.
-- Map closure keys to DFA state IDs.
-- Generate deterministic transitions for each symbol.
+- Generates ε-NFA fragments with Thompson rules.
+- Combines fragments for concatenation, union, star, plus, and optional operators.
+- Records intermediate builds for each operator step.
 
-### Layout Engine
-- Compute node positions with a simple hierarchical left-to-right layout.
-- Use BFS levels for state ordering and spacing.
-- Assign x/y coordinates to states for both NFA and DFA.
+### DFA Conversion
 
-### SVG Rendering
-- Draw states, accept rings, start arrows, edges, and labels.
-- Use different CSS classes for epsilon edges, active states, and active transitions.
-- Render curved edges when reverse transitions exist.
-- Allow resetting and zooming the view.
+- Computes ε-closures and symbol transitions.
+- Builds DFA states from NFA state sets.
+- Marks DFA accept states based on the presence of the NFA accept state.
 
-### Simulation
-- Walk the DFA sequentially for each character.
-- Record steps including transitions, current state, and acceptance/rejection.
-- Render a tape with the current position and consumed symbols.
-- Display a simulation log and result badge.
+### Visualization
 
-## How to Run
+- Renders states, accept rings, and transitions as SVG elements.
+- Uses curved edges for bidirectional links and loops for self-transitions.
+- Supports interactive zoom and drag navigation.
 
-1. Open `index.html` in a modern browser, or serve the folder with a local web server.
-2. Enter a regular expression such as `(a|b)*abb`.
-3. Click `Build` to generate the ε-NFA and DFA.
-4. Use the simulation tab to test input strings.
-
-## Example Regexes
+## Example Regular Expressions
 
 - `(a|b)*abb`
 - `a*b+`
@@ -152,7 +109,7 @@ This project is implemented in plain HTML, CSS, and JavaScript with no external 
 - `a(bc)*d`
 - `(a|ε)b`
 
-## Prompt for Replication
+## Replication Prompt
 
 Create a vanilla JavaScript web application that:
 
