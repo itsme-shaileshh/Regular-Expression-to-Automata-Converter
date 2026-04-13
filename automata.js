@@ -14,6 +14,10 @@ let svgScale    = 1;
 let svgOffX     = 0, svgOffY = 0;
 let isDragging  = false, dragStartX, dragStartY;
 
+let buildTrace      = [];
+let currentBuildStep= 0;
+let buildComplete   = false;
+
 // Simulation state
 let simDFA      = null;
 let simSteps    = [];
@@ -195,16 +199,13 @@ function nfaStar(M) {
 }
 
 function nfaPlus(M) {
-  // M followed by M*
-  return nfaConcat(M, nfaStar(
-    (() => {
-      // Re-use same M transitions concept via a new clone would be complex;
-      // simpler: plus = M · M*  handled directly
-      const s2 = newState(), a2 = newState();
-      const inner = makeNFA(M.start, M.accept, [...M.transitions]);
-      return inner;
-    })()
-  ));
+  const s = newState(), a = newState();
+  return makeNFA(s, a, [
+    ...M.transitions,
+    {from: s, label: 'ε', to: M.start},
+    {from: M.accept, label: 'ε', to: M.start},
+    {from: M.accept, label: 'ε', to: a},
+  ]);
 }
 
 function nfaOpt(M) {
@@ -215,6 +216,71 @@ function nfaOpt(M) {
     {from: s, label: 'ε', to: a},
     {from: M.accept, label: 'ε', to: a},
   ]);
+}
+
+function cloneNFA(nfa) {
+  return {
+    start: nfa.start,
+    accept: nfa.accept,
+    transitions: nfa.transitions.map(t => ({...t}))
+  };
+}
+
+function pushBuildStep(title, detail, nfa) {
+  buildTrace.push({
+    title,
+    detail,
+    nfa: cloneNFA(nfa)
+  });
+}
+
+function buildNFAFromASTWithTrace(node) {
+  switch (node.type) {
+    case 'Char': {
+      const nfa = nfaChar(node.value);
+      pushBuildStep('Symbol', `Create fragment for '${node.value}'`, nfa);
+      return nfa;
+    }
+    case 'Eps': {
+      const nfa = nfaEps();
+      pushBuildStep('Epsilon', 'Create epsilon fragment', nfa);
+      return nfa;
+    }
+    case 'Union': {
+      const M = buildNFAFromASTWithTrace(node.left);
+      const N = buildNFAFromASTWithTrace(node.right);
+      const nfa = nfaUnion(M, N);
+      pushBuildStep('Union', 'Combine left and right fragments with ε-transitions', nfa);
+      return nfa;
+    }
+    case 'Concat': {
+      const M = buildNFAFromASTWithTrace(node.left);
+      const N = buildNFAFromASTWithTrace(node.right);
+      const nfa = nfaConcat(M, N);
+      pushBuildStep('Concatenation', 'Link fragments by ε-transition', nfa);
+      return nfa;
+    }
+    case 'Star': {
+      const M = buildNFAFromASTWithTrace(node.sub);
+      const nfa = nfaStar(M);
+      pushBuildStep('Kleene Star', 'Wrap fragment with star structure', nfa);
+      return nfa;
+    }
+    case 'Plus': {
+      const M = buildNFAFromASTWithTrace(node.sub);
+      const nfa = nfaPlus(M);
+      pushBuildStep('One or More', 'Wrap fragment with plus structure', nfa);
+      return nfa;
+    }
+    case 'Opt': {
+      const M = buildNFAFromASTWithTrace(node.sub);
+      const nfa = nfaOpt(M);
+      pushBuildStep('Optional', 'Allow fragment to be skipped with ε-transition', nfa);
+      return nfa;
+    }
+    default:
+      throw new Error('Unknown AST node: ' + node.type);
+  }
 }
 
 /* ─────────────────────── Epsilon Closure ─────────────────────── */
@@ -703,7 +769,45 @@ function renderTransitionTable(nfa, dfa) {
   }
 }
 
-/* ─────────────────────── Construction Steps ─────────────────────── */
+/* ─────────────────────── Build Stepper ─────────────────────── */
+function renderBuildStep(index) {
+  currentBuildStep = Math.max(0, Math.min(index, buildTrace.length - 1));
+  const step = buildTrace[currentBuildStep];
+  if (!step) return;
+
+  document.getElementById('buildStepNumber').textContent = `Step ${currentBuildStep + 1} / ${buildTrace.length}`;
+  document.getElementById('buildStepTitle').textContent = step.title;
+  document.getElementById('buildStepDetail').textContent = step.detail;
+  document.getElementById('buildPrevBtn').disabled = currentBuildStep === 0;
+  document.getElementById('buildNextBtn').disabled = currentBuildStep === buildTrace.length - 1;
+  document.getElementById('buildFinishBtn').style.display = currentBuildStep === buildTrace.length - 1 ? '' : 'none';
+
+  renderNFA(step.nfa, 'mainSVG', 'svgContent', document.getElementById('showEpsilon').checked);
+  document.getElementById('canvasTitle').textContent = `Build Step ${currentBuildStep + 1} / ${buildTrace.length}`;
+  highlightBuildStepCard(currentBuildStep);
+}
+
+function prevBuildStep() {
+  if (currentBuildStep > 0) renderBuildStep(currentBuildStep - 1);
+}
+
+function nextBuildStep() {
+  if (currentBuildStep < buildTrace.length - 1) renderBuildStep(currentBuildStep + 1);
+}
+
+function finishBuild() {
+  buildComplete = true;
+  showToast('Construction complete. Final automaton is ready.');
+  redrawCurrent();
+}
+
+function highlightBuildStepCard(activeIndex) {
+  const cards = document.querySelectorAll('#stepsGrid .step-card');
+  cards.forEach((card, index) => {
+    card.classList.toggle('active', index === activeIndex);
+  });
+}
+
 function renderSteps(steps) {
   const grid = document.getElementById('stepsGrid');
   grid.innerHTML = '';
@@ -711,17 +815,16 @@ function renderSteps(steps) {
     const card = document.createElement('div');
     card.className = 'step-card';
     card.style.animationDelay = `${i * 50}ms`;
-    let detail = '';
-    if (step.sym)  detail = `symbol: <strong>${step.sym}</strong>`;
-    if (step.left) detail = `combining sub-expressions`;
     card.innerHTML = `
       <div class="step-num">Step ${String(i+1).padStart(2,'0')}</div>
-      <div class="step-op">${step.op}</div>
-      <div class="step-detail">${detail}</div>
+      <div class="step-op">${step.title}</div>
+      <div class="step-detail">${step.detail}</div>
     `;
+    card.addEventListener('click', () => renderBuildStep(i));
     grid.appendChild(card);
   });
   document.getElementById('parseTreePanel').style.display = steps.length ? '' : 'none';
+  highlightBuildStepCard(currentBuildStep);
 }
 
 /* ─────────────────────── Main Build Entry Point ─────────────────────── */
@@ -730,13 +833,17 @@ function buildAutomaton() {
   if (!raw) { showToast("Please enter a regular expression"); return; }
 
   stateCounter = 0;
+  buildTrace = [];
+  currentBuildStep = 0;
+  buildComplete = false;
+
   try {
     const tokens = tokenize(raw);
     const parser = new Parser(tokens);
     const ast    = parser.parseExpr();
     if (parser.peek().type !== T_EOF) throw new Error("Unexpected characters after expression");
 
-    const nfa = buildNFAFromAST(ast);
+    const nfa = buildNFAFromASTWithTrace(ast);
     const dfa = nfaToDFA(nfa);
 
     globalNFA    = nfa;
@@ -756,9 +863,9 @@ function buildAutomaton() {
     document.getElementById('regexDisplay').textContent = `✓ Parsed: ${raw}`;
     document.getElementById('canvasPlaceholder').style.display = 'none';
 
-    // Render
-    redrawCurrent();
-    renderSteps(parser.steps);
+    // Render build steps first
+    renderSteps(buildTrace);
+    renderBuildStep(0);
     renderTransitionTable(nfa, dfa);
 
     // Update simulate view
@@ -776,6 +883,22 @@ function redrawCurrent() {
   if (!globalNFA) return;
   const showEps = document.getElementById('showEpsilon').checked;
   const showDFA = document.getElementById('showDFA').checked;
+
+  if (!buildComplete && buildTrace.length) {
+    if (currentView !== 'nfa') {
+      showToast('Complete the build steps to view DFA and transition tables');
+      currentView = 'nfa';
+      document.getElementById('tab-nfa').classList.add('active');
+      document.getElementById('tab-dfa').classList.remove('active');
+      document.getElementById('tab-table').classList.remove('active');
+    }
+    const step = buildTrace[currentBuildStep];
+    renderNFA(step.nfa, 'mainSVG', 'svgContent', showEps);
+    document.getElementById('canvasTitle').textContent = `Build Step ${currentBuildStep + 1} / ${buildTrace.length}`;
+    document.getElementById('canvasContainer').style.display = '';
+    document.getElementById('tableContainer').style.display = 'none';
+    return;
+  }
 
   if (currentView === 'nfa') {
     renderNFA(globalNFA, 'mainSVG', 'svgContent', showEps);

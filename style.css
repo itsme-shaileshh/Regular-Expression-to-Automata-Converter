@@ -403,6 +403,38 @@ body {
 .table-sub { font-size: 0.72rem; color: var(--text3); font-family: var(--mono); margin-bottom: 1.5rem; }
 
 /* ── Construction steps ── */
+.build-stepper {
+  display: flex; flex-wrap: wrap; justify-content: space-between;
+  gap: 1rem; align-items: center; margin-bottom: 1rem;
+  padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, rgba(124,106,247,.05), rgba(15,14,42,.02));
+}
+.build-step-info {
+  flex: 1 1 320px;
+}
+.build-step-number {
+  font-family: var(--mono); font-size: 0.75rem; color: var(--accent);
+  letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.35rem;
+}
+.build-step-title {
+  font-family: var(--sans); font-size: 1rem; font-weight: 700; color: var(--text);
+  margin-bottom: 0.35rem;
+}
+.build-step-detail {
+  font-family: var(--mono); font-size: 0.82rem; color: var(--text2);
+}
+.build-step-controls {
+  display: flex; flex-wrap: wrap; gap: 0.5rem;
+}
+.step-btn {
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text2); font-family: var(--mono); font-size: 0.78rem;
+  font-weight: 600; padding: 0.6rem 1rem; border-radius: var(--radius-sm);
+  cursor: pointer; transition: all 0.2s;
+}
+.step-btn:hover { border-color: var(--accent); color: var(--accent); }
+.step-btn.accent { background: var(--accent-glow); color: var(--accent); border-color: var(--accent); }
+.step-card.active { border-color: var(--accent); background: rgba(124,106,247,.08); }
 .steps-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1rem;

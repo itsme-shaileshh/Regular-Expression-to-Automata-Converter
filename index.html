@@ -183,6 +183,18 @@
           <h2 class="panel-title">Parse Tree & Construction Steps</h2>
         </div>
         <div class="panel-body">
+          <div class="build-stepper" id="buildStepper">
+            <div class="build-step-info">
+              <div class="build-step-number" id="buildStepNumber">Step 1 / 1</div>
+              <div class="build-step-title" id="buildStepTitle">Build the NFA incrementally</div>
+              <div class="build-step-detail" id="buildStepDetail">Each regex fragment is converted into an ε-NFA fragment, then combined.</div>
+            </div>
+            <div class="build-step-controls">
+              <button class="step-btn" id="buildPrevBtn" onclick="prevBuildStep()">⟨ Prev</button>
+              <button class="step-btn" id="buildNextBtn" onclick="nextBuildStep()">Next ⟩</button>
+              <button class="step-btn accent" id="buildFinishBtn" onclick="finishBuild()" style="display:none">Finish Build</button>
+            </div>
+          </div>
           <div class="steps-grid" id="stepsGrid"></div>
         </div>
       </div>
